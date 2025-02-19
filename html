@@ -78,12 +78,8 @@
       font-weight: bold;
       color: #007bff;
     }
-    #endgame-message {
-      display: none;
-      margin-top: 20px;
-    }
     #next-turn-button {
-      margin-top: 10px;
+      margin-top: 10px; /* Position the button below the card container */
       padding: 10px 20px;
       font-size: 16px;
       cursor: pointer;
@@ -95,6 +91,10 @@
     }
     #next-turn-button:hover {
       background-color: #218838;
+    }
+    #endgame-message {
+      display: none;
+      margin-top: 20px;
     }
   </style>
 </head>
@@ -274,9 +274,7 @@
       // Hide the "Next Turn" button
       document.getElementById('next-turn-button').style.display = 'none';
 
-      // Clear the current player's cards (optional, depending on game rules)
-      players[currentPlayer].cards = [];
-
+      // DO NOT CLEAR THE CURRENT PLAYER'S CARDS HERE
       // Switch to the next player
       switchPlayer();
       hasAnsweredQuestion = false; // Reset the flag for the next player
