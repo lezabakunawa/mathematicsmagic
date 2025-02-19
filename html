@@ -38,6 +38,10 @@
     button:hover {
       background-color: #0056b3;
     }
+    button:disabled {
+      background-color: #ccc; /* Grayed out when disabled */
+      cursor: not-allowed;
+    }
     .card {
       display: inline-block;
       margin: 5px;
@@ -103,7 +107,7 @@
   <div id="game-board">
     <p id="question"></p>
     <input type="text" id="answer-input" placeholder="Your answer">
-    <button onclick="submitAnswer()">Submit Answer</button>
+    <button id="submit-answer-button" onclick="submitAnswer()">Submit Answer</button>
     <div id="message"></div>
     <div id="current-turn">Player 1's Turn</div>
     <div id="player-stats">
@@ -172,6 +176,10 @@
     function submitAnswer() {
       const userAnswer = document.getElementById('answer-input').value.trim();
       const messageDiv = document.getElementById('message');
+      const submitButton = document.getElementById('submit-answer-button');
+
+      // Disable the "Submit Answer" button to prevent multiple submissions
+      submitButton.disabled = true;
 
       // Ensure currentQuestion and currentQuestion.answer exist
       if (!currentQuestion || currentQuestion.answer === undefined) {
@@ -274,7 +282,6 @@
       // Hide the "Next Turn" button
       document.getElementById('next-turn-button').style.display = 'none';
 
-      // DO NOT CLEAR THE CURRENT PLAYER'S CARDS HERE
       // Switch to the next player
       switchPlayer();
       hasAnsweredQuestion = false; // Reset the flag for the next player
@@ -286,6 +293,10 @@
 
       // Generate a new question for the next player
       currentQuestion = generateQuestion();
+
+      // Re-enable the "Submit Answer" button for the next player
+      document.getElementById('submit-answer-button').disabled = false;
+
       updateUI();
     }
 
@@ -336,6 +347,10 @@
       hasAnsweredQuestion = false; // Reset the flag
       document.getElementById('endgame-message').style.display = 'none';
       currentQuestion = generateQuestion();
+
+      // Re-enable the "Submit Answer" button at the start of a new game
+      document.getElementById('submit-answer-button').disabled = false;
+
       updateUI();
     }
 
