@@ -113,6 +113,8 @@
     <div id="player-stats">
       <p>Player 1 Health: <span id="player1-health">30</span></p>
       <p>Player 2 Health: <span id="player2-health">30</span></p>
+      <p>Player 1 Cards: <span id="player1-cards-count">0</span></p>
+      <p>Player 2 Cards: <span id="player2-cards-count">0</span></p>
     </div>
     <div id="player-cards">
       <p>Your Cards:</p>
@@ -227,15 +229,8 @@
       hasAnsweredQuestion = true; // Mark that the player has answered the question
       updateUI();
 
-      // Do not switch turns yet if the player has cards to use
-      if (players[currentPlayer].cards.length > 0) {
-        document.getElementById('next-turn-button').style.display = 'block'; // Show the "Next Turn" button
-        return; // Wait for the player to use a card or skip
-      }
-
-      // If no cards are left, switch turns
-      switchPlayer();
-      hasAnsweredQuestion = false; // Reset the flag for the next player
+      // Always show the "Next Turn" button after answering the question
+      document.getElementById('next-turn-button').style.display = 'block';
     }
 
     // Draw Card
@@ -245,6 +240,7 @@
         const card = decks[level].cards.splice(cardIndex, 1)[0];
         players[player].cards.push(card); // Add card to player's hand
       }
+      updateUI(); // Update the card count immediately
     }
 
     // Use Card
@@ -255,11 +251,8 @@
       // Update UI but do not switch turns immediately
       updateUI();
 
-      // After using the card, check if the turn is complete
-      if (players[currentPlayer].cards.length === 0) {
-        switchPlayer();
-        hasAnsweredQuestion = false; // Reset the flag for the next player
-      }
+      // Always show the "Next Turn" button after using a card
+      document.getElementById('next-turn-button').style.display = 'block';
     }
 
     // Apply Card Effect
@@ -279,7 +272,11 @@
       } else if (card === 'freeze') {
         messageDiv.textContent = `${opponent} is frozen and skips their next turn!`;
       } else if (card === 'swap') {
-        messageDiv.textContent = 'Swap card logic not implemented yet.';
+        // Swap hands between the current player and the opponent
+        const tempCards = players[player].cards;
+        players[player].cards = players[opponent].cards;
+        players[opponent].cards = tempCards;
+        messageDiv.textContent = `You swapped hands with ${opponent}!`;
       } else if (card === 'trash') {
         players[opponent].cards = [];
         messageDiv.textContent = `${opponent}'s cards have been trashed!`;
@@ -294,12 +291,15 @@
 
     // Next Turn
     function nextTurn() {
-      // Hide the "Next Turn" button
-      document.getElementById('next-turn-button').style.display = 'none';
-
       // Switch to the next player
       switchPlayer();
       hasAnsweredQuestion = false; // Reset the flag for the next player
+
+      // Re-enable the "Submit Answer" button for the next player
+      document.getElementById('submit-answer-button').disabled = false;
+
+      // Keep the "Next Turn" button visible for the next player
+      document.getElementById('next-turn-button').style.display = 'block';
     }
 
     // Switch Player
@@ -308,9 +308,6 @@
 
       // Generate a new question for the next player
       currentQuestion = generateQuestion();
-
-      // Re-enable the "Submit Answer" button for the next player
-      document.getElementById('submit-answer-button').disabled = false;
 
       updateUI();
     }
@@ -321,6 +318,8 @@
         endGame();
         return;
       }
+
+      // Update question and health stats
       document.getElementById('question').textContent = currentQuestion.question;
       document.getElementById('player1-health').textContent = players.player1.health;
       document.getElementById('player2-health').textContent = players.player2.health;
@@ -328,6 +327,11 @@
       // Update whose turn it is
       document.getElementById('current-turn').textContent = `${currentPlayer.charAt(0).toUpperCase() + currentPlayer.slice(1)}'s Turn`;
 
+      // Update card counts
+      document.getElementById('player1-cards-count').textContent = players.player1.cards.length;
+      document.getElementById('player2-cards-count').textContent = players.player2.cards.length;
+
+      // Update the card list for the current player
       const cardsList = document.getElementById('cards-list');
       cardsList.innerHTML = '';
       players[currentPlayer].cards.forEach((card, index) => {
@@ -338,8 +342,8 @@
         cardsList.appendChild(cardDiv);
       });
 
-      // Show or hide the "Next Turn" button based on whether the player has cards
-      document.getElementById('next-turn-button').style.display = players[currentPlayer].cards.length > 0 ? 'block' : 'none';
+      // Always keep the "Next Turn" button visible
+      document.getElementById('next-turn-button').style.display = 'block';
     }
 
     // End Game
@@ -347,6 +351,9 @@
       const winner = players.player1.health > 0 ? 'Player 1' : 'Player 2';
       document.getElementById('winner-message').textContent = `${winner} wins!`;
       document.getElementById('endgame-message').style.display = 'block';
+
+      // Hide the "Next Turn" button when the game ends
+      document.getElementById('next-turn-button').style.display = 'none';
     }
 
     // Reset Game
