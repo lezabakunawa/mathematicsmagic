@@ -147,15 +147,15 @@
     const decks = JSON.parse(JSON.stringify(LEVELS)); // Clone LEVELS to create decks
     let hasAnsweredQuestion = false; // Track if the player has answered a question
 
-    // Generate Math Question
-    function generateQuestion() {
-      const level = Math.floor(Math.random() * 6);
-      const num1 = Math.floor(Math.random() * (LEVELS[level].range[1] - LEVELS[level].range[0] + 1)) + LEVELS[level].range[0];
-      const num2 = Math.floor(Math.random() * 13);
-      const operation = OPERATIONS[Math.floor(Math.random() * OPERATIONS.length)];
-      const question = `${num1} ${operation} ${num2}`;
-      const answer = evaluateExpression(num1, operation, num2);
-      return { question, answer, level };
+    // Helper Function: Calculate GCD
+    function gcd(a, b) {
+      return b === 0 ? a : gcd(b, a % b);
+    }
+
+    // Helper Function: Simplify Fraction
+    function simplifyFraction(numerator, denominator) {
+      const divisor = gcd(numerator, denominator);
+      return `${numerator / divisor}/${denominator / divisor}`;
     }
 
     // Evaluate Expression
@@ -167,9 +167,26 @@
         case '/':
           if (b === 0) return 'undefined';
           const result = a / b;
-          return Number.isInteger(result) ? result : `${a}/${b}`; // Return fraction if not a whole number
+
+          // Return three valid answers: exact fraction, decimal, simplified fraction
+          const exactFraction = `${a}/${b}`;
+          const decimal = result.toFixed(2); // Rounded to two decimal places
+          const simplified = simplifyFraction(a, b);
+
+          return [exactFraction, decimal, simplified];
         default: return null;
       }
+    }
+
+    // Generate Math Question
+    function generateQuestion() {
+      const level = Math.floor(Math.random() * 6);
+      const num1 = Math.floor(Math.random() * (LEVELS[level].range[1] - LEVELS[level].range[0] + 1)) + LEVELS[level].range[0];
+      const num2 = Math.floor(Math.random() * 13);
+      const operation = OPERATIONS[Math.floor(Math.random() * OPERATIONS.length)];
+      const question = `${num1} ${operation} ${num2}`;
+      const answer = evaluateExpression(num1, operation, num2);
+      return { question, answer, level };
     }
 
     // Submit Answer
@@ -191,19 +208,17 @@
       }
 
       // Parse the correct answer and user input as strings
-      const correctAnswer = Array.isArray(currentQuestion.answer)
+      const correctAnswers = Array.isArray(currentQuestion.answer)
         ? currentQuestion.answer.map(String) // Convert array elements to strings for comparison
-        : String(currentQuestion.answer); // Convert single answer to string
+        : [String(currentQuestion.answer)]; // Convert single answer to string
 
-      const isCorrect = Array.isArray(correctAnswer)
-        ? correctAnswer.includes(userAnswer) // Check if user input matches any valid answer
-        : correctAnswer === userAnswer; // Compare directly for single answers
+      const isCorrect = correctAnswers.includes(userAnswer); // Check if user input matches any valid answer
 
       if (isCorrect) {
         messageDiv.textContent = 'Correct! Drawing a card...';
         drawCard(currentPlayer, currentQuestion.level);
       } else {
-        messageDiv.textContent = `Incorrect! The correct answer was ${currentQuestion.answer}.`;
+        messageDiv.textContent = `Incorrect! The correct answers were: ${correctAnswers.join(', ')}.`;
       }
       setTimeout(() => {
         messageDiv.textContent = ''; // Clear the message after a short delay
