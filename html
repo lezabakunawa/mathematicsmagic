@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Math Battle Game</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+      background-color: cyan; /* Background color set to cyan */
+    }
+    h1 {
+      color: #333;
+    }
+    #game-board {
+      margin: 20px auto;
+      width: 400px;
+      padding: 20px;
+      border: 2px solid #ccc;
+      border-radius: 10px;
+      background-color: #fff;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    button {
+      margin: 10px;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      border: none;
+      border-radius: 5px;
+      background-color: #007bff;
+      color: white;
+      transition: background-color 0.3s;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .card {
+      display: inline-block;
+      margin: 5px;
+      padding: 10px;
+      border: 1px solid #333;
+      border-radius: 5px;
+      background-color: #e9ecef;
+      cursor: pointer;
+      font-size: 14px;
+      min-width: 80px; /* Ensure consistent width */
+      text-align: center;
+    }
+    .card:hover {
+      background-color: #d4d4d4;
+    }
+    #cards-list {
+      min-height: 200px; /* Reduced height to half (originally 400px) */
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      padding: 10px;
+      background-color: #f9f9f9;
+      margin-top: 10px;
+      display: flex;
+      flex-wrap: wrap; /* Allow cards to wrap to the next line */
+      justify-content: flex-start; /* Align cards to the start */
+      align-items: flex-start; /* Align cards vertically */
+      gap: 10px; /* Add spacing between cards */
+      overflow-y: auto; /* Enable scrolling if cards exceed the container height */
+    }
+    #message {
+      margin-top: 10px;
+      font-size: 16px;
+      color: #333;
+    }
+    #current-turn {
+      margin-top: 10px;
+      font-size: 18px;
+      font-weight: bold;
+      color: #007bff;
+    }
+    #endgame-message {
+      display: none;
+      margin-top: 20px;
+    }
+    #next-turn-button {
+      margin-top: 10px;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      border: none;
+      border-radius: 5px;
+      background-color: #28a745;
+      color: white;
+      transition: background-color 0.3s;
+    }
+    #next-turn-button:hover {
+      background-color: #218838;
+    }
+  </style>
+</head>
+<body>
+  <h1>Math Battle Game</h1>
+  <div id="game-board">
+    <p id="question"></p>
+    <input type="text" id="answer-input" placeholder="Your answer">
+    <button onclick="submitAnswer()">Submit Answer</button>
+    <div id="message"></div>
+    <div id="current-turn">Player 1's Turn</div>
+    <div id="player-stats">
+      <p>Player 1 Health: <span id="player1-health">30</span></p>
+      <p>Player 2 Health: <span id="player2-health">30</span></p>
+    </div>
+    <div id="player-cards">
+      <p>Your Cards:</p>
+      <div id="cards-list"></div>
+    </div>
+    <button id="next-turn-button" style="display: none;" onclick="nextTurn()">Next Turn</button>
+    <div id="endgame-message">
+      <h2 id="winner-message"></h2>
+      <button onclick="resetGame()">Restart Game</button>
+    </div>
+  </div>
+  <script>
+    // Game Constants
+    const PLAYER_HEALTH = 30;
+    const MAX_HEALTH = 30;
+    const OPERATIONS = ['+', '-', '*', '/'];
+    const LEVELS = {
+      0: { range: [0, 2], cards: ['+1 attack', '+1 heal'] },
+      1: { range: [3, 4], cards: ['+2 attack', '+2 heal'] },
+      2: { range: [5, 6], cards: ['+3 attack', '+3 heal', 'freeze'] },
+      3: { range: [7, 8], cards: ['+4 attack', '+4 heal', 'swap'] },
+      4: { range: [9, 10], cards: ['+5 attack', '+5 heal', 'trash'] },
+      5: { range: [11, 12], cards: ['+6 attack', '+6 heal', 'heal all'] }
+    };
+
+    // Game State
+    const players = {
+      player1: { health: PLAYER_HEALTH, cards: [] },
+      player2: { health: PLAYER_HEALTH, cards: [] }
+    };
+    let currentPlayer = 'player1';
+    const decks = JSON.parse(JSON.stringify(LEVELS)); // Clone LEVELS to create decks
+    let hasAnsweredQuestion = false; // Track if the player has answered a question
+
+    // Generate Math Question
+    function generateQuestion() {
+      const level = Math.floor(Math.random() * 6);
+      const num1 = Math.floor(Math.random() * (LEVELS[level].range[1] - LEVELS[level].range[0] + 1)) + LEVELS[level].range[0];
+      const num2 = Math.floor(Math.random() * 13);
+      const operation = OPERATIONS[Math.floor(Math.random() * OPERATIONS.length)];
+      const question = `${num1} ${operation} ${num2}`;
+      const answer = evaluateExpression(num1, operation, num2);
+      return { question, answer, level };
+    }
+
+    // Evaluate Expression
+    function evaluateExpression(a, op, b) {
+      switch (op) {
+        case '+': return a + b;
+        case '-': return a - b;
+        case '*': return a * b;
+        case '/':
+          if (b === 0) return 'undefined';
+          const result = a / b;
+          return Number.isInteger(result) ? result : `${a}/${b}`; // Return fraction if not a whole number
+        default: return null;
+      }
+    }
+
+    // Submit Answer
+    function submitAnswer() {
+      const userAnswer = document.getElementById('answer-input').value.trim();
+      const messageDiv = document.getElementById('message');
+
+      // Ensure currentQuestion and currentQuestion.answer exist
+      if (!currentQuestion || currentQuestion.answer === undefined) {
+        messageDiv.textContent = 'An error occurred. Please try again.';
+        setTimeout(() => {
+          messageDiv.textContent = '';
+        }, 2000);
+        return;
+      }
+
+      // Parse the correct answer and user input as strings
+      const correctAnswer = Array.isArray(currentQuestion.answer)
+        ? currentQuestion.answer.map(String) // Convert array elements to strings for comparison
+        : String(currentQuestion.answer); // Convert single answer to string
+
+      const isCorrect = Array.isArray(correctAnswer)
+        ? correctAnswer.includes(userAnswer) // Check if user input matches any valid answer
+        : correctAnswer === userAnswer; // Compare directly for single answers
+
+      if (isCorrect) {
+        messageDiv.textContent = 'Correct! Drawing a card...';
+        drawCard(currentPlayer, currentQuestion.level);
+      } else {
+        messageDiv.textContent = `Incorrect! The correct answer was ${currentQuestion.answer}.`;
+      }
+      setTimeout(() => {
+        messageDiv.textContent = ''; // Clear the message after a short delay
+      }, 2000); // Message disappears after 2 seconds
+
+      hasAnsweredQuestion = true; // Mark that the player has answered the question
+      updateUI();
+
+      // Do not switch turns yet if the player has cards to use
+      if (players[currentPlayer].cards.length > 0) {
+        document.getElementById('next-turn-button').style.display = 'block'; // Show the "Next Turn" button
+        return; // Wait for the player to use a card or skip
+      }
+
+      // If no cards are left, switch turns
+      switchPlayer();
+      hasAnsweredQuestion = false; // Reset the flag for the next player
+    }
+
+    // Draw Card
+    function drawCard(player, level) {
+      if (decks[level].cards.length > 0) {
+        const cardIndex = Math.floor(Math.random() * decks[level].cards.length);
+        const card = decks[level].cards.splice(cardIndex, 1)[0];
+        players[player].cards.push(card); // Add card to player's hand
+      }
+    }
+
+    // Use Card
+    function useCard(cardIndex) {
+      const card = players[currentPlayer].cards.splice(cardIndex, 1)[0]; // Remove card from hand
+      applyCardEffect(card, currentPlayer);
+
+      // Update UI but do not switch turns immediately
+      updateUI();
+
+      // After using the card, check if the turn is complete
+      if (players[currentPlayer].cards.length === 0) {
+        switchPlayer();
+        hasAnsweredQuestion = false; // Reset the flag for the next player
+      }
+    }
+
+    // Apply Card Effect
+    function applyCardEffect(card, player) {
+      const opponent = player === 'player1' ? 'player2' : 'player1';
+      const messageDiv = document.getElementById('message');
+      if (card.includes('attack')) {
+        const damage = parseInt(card.split(' ')[0]);
+        players[opponent].health -= damage;
+        players[opponent].health = Math.max(players[opponent].health, 0);
+        messageDiv.textContent = `You dealt ${damage} damage to ${opponent}!`;
+      } else if (card.includes('heal')) {
+        const heal = parseInt(card.split(' ')[0]);
+        players[player].health += heal;
+        players[player].health = Math.min(players[player].health, MAX_HEALTH);
+        messageDiv.textContent = `You healed yourself for ${heal} health!`;
+      } else if (card === 'freeze') {
+        messageDiv.textContent = `${opponent} is frozen and skips their next turn!`;
+      } else if (card === 'swap') {
+        messageDiv.textContent = 'Swap card logic not implemented yet.';
+      } else if (card === 'trash') {
+        players[opponent].cards = [];
+        messageDiv.textContent = `${opponent}'s cards have been trashed!`;
+      } else if (card === 'heal all') {
+        players[player].health = MAX_HEALTH;
+        messageDiv.textContent = `${player} has restored all their health!`;
+      }
+      setTimeout(() => {
+        messageDiv.textContent = ''; // Clear the message after a short delay
+      }, 2000); // Message disappears after 2 seconds
+    }
+
+    // Next Turn
+    function nextTurn() {
+      // Hide the "Next Turn" button
+      document.getElementById('next-turn-button').style.display = 'none';
+
+      // Clear the current player's cards (optional, depending on game rules)
+      players[currentPlayer].cards = [];
+
+      // Switch to the next player
+      switchPlayer();
+      hasAnsweredQuestion = false; // Reset the flag for the next player
+    }
+
+    // Switch Player
+    function switchPlayer() {
+      currentPlayer = currentPlayer === 'player1' ? 'player2' : 'player1';
+
+      // Generate a new question for the next player
+      currentQuestion = generateQuestion();
+      updateUI();
+    }
+
+    // Update UI
+    function updateUI() {
+      if (players.player1.health <= 0 || players.player2.health <= 0) {
+        endGame();
+        return;
+      }
+      document.getElementById('question').textContent = currentQuestion.question;
+      document.getElementById('player1-health').textContent = players.player1.health;
+      document.getElementById('player2-health').textContent = players.player2.health;
+
+      // Update whose turn it is
+      document.getElementById('current-turn').textContent = `${currentPlayer.charAt(0).toUpperCase() + currentPlayer.slice(1)}'s Turn`;
+
+      const cardsList = document.getElementById('cards-list');
+      cardsList.innerHTML = '';
+      players[currentPlayer].cards.forEach((card, index) => {
+        const cardDiv = document.createElement('div');
+        cardDiv.className = 'card';
+        cardDiv.textContent = card;
+        cardDiv.onclick = () => useCard(index);
+        cardsList.appendChild(cardDiv);
+      });
+
+      // Show or hide the "Next Turn" button based on whether the player has cards
+      document.getElementById('next-turn-button').style.display = players[currentPlayer].cards.length > 0 ? 'block' : 'none';
+    }
+
+    // End Game
+    function endGame() {
+      const winner = players.player1.health > 0 ? 'Player 1' : 'Player 2';
+      document.getElementById('winner-message').textContent = `${winner} wins!`;
+      document.getElementById('endgame-message').style.display = 'block';
+    }
+
+    // Reset Game
+    function resetGame() {
+      players.player1.health = PLAYER_HEALTH;
+      players.player2.health = PLAYER_HEALTH;
+      players.player1.cards = [];
+      players.player2.cards = [];
+      currentPlayer = 'player1';
+      Object.keys(decks).forEach(level => {
+        decks[level].cards = [...LEVELS[level].cards];
+      });
+      hasAnsweredQuestion = false; // Reset the flag
+      document.getElementById('endgame-message').style.display = 'none';
+      currentQuestion = generateQuestion();
+      updateUI();
+    }
+
+    // Initialize Game
+    let currentQuestion = generateQuestion();
+    updateUI();
+  </script>
+</body>
+</html>
